@@ -3,7 +3,6 @@ from flask import Flask, request, jsonify, abort
 from sqlalchemy import exc
 import json
 from flask_cors import CORS
-
 from src.auth.auth import requires_auth, AuthError
 from src.database.modelss import *
 
@@ -14,26 +13,20 @@ def create_app(test_config=None):
     cors = CORS(app, resources={r"*": {"origins": "*"}})
     db = getDBReferance()
 
-
     @app.after_request
     def after_request(response):
-        response.headers.add('Access-Control-Allow-Methods', 'GET,PATCH,POST,DELETE,OPTIONS')
+        response.headers.add('Access-Control-Allow-Methods', 'GET,PATCH,POST,'
+                                                             'DELETE,OPTIONS')
         response.headers.add('Access-Control-Allow-Credentials', 'true')
         return response
-
-
-
 
     @app.route("/drinks", methods=["GET"])
     def get_drinks():
         drinks = Drink.query.all()
-        return jsonify({
-            'success': True,
-            'drinks': [x.short() for x in drinks]
-        })
+        return jsonify({'success': True,
+                        'drinks': [x.short() for x in drinks]})
 
-
-    @app.route("/drinks",methods=["POST"])
+    @app.route("/drinks", methods=["POST"])
     @requires_auth("post:drinks")
     def add_drink(payload):
         requestBody = request.get_json()
@@ -41,9 +34,14 @@ def create_app(test_config=None):
 
             recipe = requestBody['recipe']
             title = requestBody['title']
-            newDrink=Drink(recipe=json.dumps(recipe),title=title)
+            emptyList = []
+            if type(recipe) == dict:
+                emptyList.append(recipe)
+            else:
+                emptyList = recipe
+            newDrink = Drink(recipe=json.dumps(emptyList), title=title)
             newDrink.insert()
-            return jsonify({'success':True,'drinks':[newDrink.long()]})
+            return jsonify({'success': True, 'drinks': [newDrink.long()]})
         except BaseException as s:
             print(s)
             abort(400)
@@ -59,19 +57,20 @@ def create_app(test_config=None):
 
     @app.route("/drinks/<int:id>", methods=["DELETE"])
     @requires_auth("delete:drinks")
-    def remove_drink(payload,id):
+    def remove_drink(payload, id):
         drink = Drink.query.filter(Drink.id == id).one_or_none()
         if not drink:
             abort(404)
         try:
             drink.delete()
             return jsonify({"success": True, "delete": id})
-        except:
+        except Exception as e:
+            print(e)
             abort(400)
 
     @app.route("/drinks/<int:id>", methods=["PATCH"])
     @requires_auth("patch:drinks")
-    def update_drink(payload,id):
+    def update_drink(payload, id):
         drink = Drink.query.filter(Drink.id == id).one_or_none()
 
         if not drink:
@@ -80,15 +79,13 @@ def create_app(test_config=None):
             requestBody = request.get_json()
             recipe = requestBody['recipe']
             title = requestBody['title']
-            drink.title=title
-            drink.recipe=json.dumps(recipe)
+            drink.title = title
+            drink.recipe = json.dumps(recipe)
             drink.update()
-            return jsonify({'success':True,'drinks':[drink.long()]})
-        except:
+            return jsonify({'success': True, 'drinks': [drink.long()]})
+        except Exception as e:
+            print(e)
             abort(400)
-
-
-
 
     @app.errorhandler(422)
     def unprocessable(error):
@@ -97,7 +94,6 @@ def create_app(test_config=None):
             "error": 422,
             "message": "unprocessable"
         }), 422
-
 
     @app.errorhandler(404)
     def not_found(error):

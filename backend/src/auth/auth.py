@@ -3,10 +3,13 @@ from flask import request, _request_ctx_stack
 from functools import wraps
 from jose import jwt
 from urllib.request import urlopen
+import os
 
-AUTH0_DOMAIN = 'coffeshopapp.us.auth0.com'
-ALGORITHMS = ['RS256']
-API_AUDIENCE = 'drinks'
+
+os.environ['AUTH0_DOMAIN'] = 'coffeshopapp.us.auth0.com'
+os.environ['ALGORITHMS'] = 'RS256'
+os.environ['API_AUDIENCE'] = 'drinks'
+
 
 ## AuthError Exception
 '''
@@ -68,7 +71,7 @@ def check_permissions(permission, payload):
             counter=1
 
     if counter==0:
-        raise AuthError('Forbidden',403)
+        raise AuthError('not authorized',401)
 '''
 @TODO implement verify_decode_jwt(token) method
     @INPUTS
@@ -90,7 +93,7 @@ def verify_decode_jwt(token):
     #  base64UrlEncode(payload),Public Key)
     # Here We Need To Get Public Key From Auth0 List
 
-    jwtKeys = json.loads(urlopen(f'https://{AUTH0_DOMAIN}/.well-known/jwks.json').read())
+    jwtKeys = json.loads(urlopen(f'https://{os.environ.get("AUTH0_DOMAIN")}/.well-known/jwks.json').read())
     header_data = jwt.get_unverified_header(token)
 
     if 'kid' not in header_data:
@@ -112,9 +115,9 @@ def verify_decode_jwt(token):
         try:
             payload = jwt.decode(token,
                                  compose_rsaKey,
-                                 algorithms=ALGORITHMS,
-                                 audience=API_AUDIENCE,
-                                 issuer=f'https://{AUTH0_DOMAIN}/')
+                                 algorithms=[os.environ.get("ALGORITHMS")],
+                                 audience=os.environ.get("API_AUDIENCE"),
+                                 issuer=f'https://{os.environ.get("AUTH0_DOMAIN")}/')
             return payload
         except:
             raise AuthError("Not Authraized", 401)
